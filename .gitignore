@@ -1,0 +1,25 @@
+# Rust build output
+/target/
+
+# IDE metadata
+/.idea/
+*.iml
+
+# Heap dumps (including compressed dumps)
+*.hprof
+*.hprof.gz
+*.hprof.zip
+
+# Analysis cache
+/jdump-cache/
+/jda-cache/
+
+# Editor temporary files
+*.swp
+*.swo
+*~
+
+# Operating system metadata
+.DS_Store
+Thumbs.db
+Desktop.ini

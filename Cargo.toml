@@ -1,0 +1,12 @@
+[package]
+name = "jda"
+version = "0.1.0"
+edition = "2024"
+description = "Java Heap Dump Analyzer"
+license = "MIT"
+
+[dependencies]
+anyhow = "1.0"
+clap = { version = "4.5", features = ["derive"] }
+
+rustyline = { version = "17.0", default-features = false, features = ["custom-bindings"] }
