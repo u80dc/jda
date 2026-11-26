@@ -54,6 +54,14 @@ cargo run -- -V
 cargo run -- --version
 ```
 
+版本输出包含版本号和构建 target，例如：
+
+```text
+jda 0.1.0 (x86_64-pc-windows-msvc)
+```
+
+交叉编译时，target 来自 Cargo 的构建目标。例如使用 `cargo build --release --target x86_64-unknown-linux-musl` 构建的程序，会显示 `jda 0.1.0 (x86_64-unknown-linux-musl)`。该信息在构建时写入程序。
+
 ## 工作空间
 
 使用 `-w` 或 `--workspace` 指定工作空间根目录：

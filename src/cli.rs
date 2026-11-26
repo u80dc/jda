@@ -4,7 +4,7 @@ use clap::Parser;
 
 /// Java Heap Dump Analyzer
 #[derive(Debug, Parser)]
-#[command(version, about)]
+#[command(version = crate::build_info::VERSION, about)]
 pub(crate) struct Args {
     /// Path to a Java heap dump file
     pub(crate) file: PathBuf,
@@ -43,7 +43,11 @@ mod tests {
             assert_eq!(error.kind(), ErrorKind::DisplayVersion);
             assert_eq!(
                 error.to_string().trim(),
-                format!("jda {}", env!("CARGO_PKG_VERSION"))
+                format!(
+                    "jda {} ({})",
+                    env!("CARGO_PKG_VERSION"),
+                    env!("JDA_BUILD_TARGET")
+                )
             );
         }
     }

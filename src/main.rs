@@ -3,6 +3,7 @@ use std::fs::File;
 use anyhow::{Context, Result, bail};
 use clap::Parser;
 
+mod build_info;
 mod cli;
 mod commands;
 mod console;
