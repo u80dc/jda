@@ -11,7 +11,8 @@ use rustyline::{
     validate::Validator,
 };
 
-const COMMANDS: &[&str] = &["/help", "/info", "/q"];
+use crate::commands::{self, COMMANDS, Command};
+use crate::workspace::Workspace;
 
 struct Commands;
 
@@ -46,7 +47,7 @@ impl Hinter for Commands {
         }
         let matches: Vec<_> = COMMANDS
             .iter()
-            .copied()
+            .map(|definition| definition.name)
             .filter(|command| command.starts_with(&prefix))
             .collect();
         match matches.as_slice() {
@@ -83,17 +84,17 @@ impl Completer for Commands {
         }
         let candidates = COMMANDS
             .iter()
-            .filter(|command| command.starts_with(&word.to_ascii_lowercase()))
-            .map(|command| Pair {
-                display: (*command).to_owned(),
-                replacement: (*command).to_owned(),
+            .filter(|definition| definition.name.starts_with(&word.to_ascii_lowercase()))
+            .map(|definition| Pair {
+                display: definition.name.to_owned(),
+                replacement: definition.name.to_owned(),
             })
             .collect();
         Ok((start, candidates))
     }
 }
 
-pub fn run(path: &Path, size: u64) -> Result<()> {
+pub(crate) fn run(path: &Path, size: u64, workspace: &Workspace) -> Result<()> {
     let config = Config::builder().max_history_size(100)?.build();
     let mut editor = Editor::<Commands, DefaultHistory>::with_config(config)?;
     editor.set_helper(Some(Commands));
@@ -103,7 +104,7 @@ pub fn run(path: &Path, size: u64) -> Result<()> {
     );
 
     println!("jda · Java Heap Dump Analyzer\n");
-    print_info(path, size);
+    print_info(path, size, workspace);
     println!();
 
     loop {
@@ -113,7 +114,8 @@ pub fn run(path: &Path, size: u64) -> Result<()> {
                 if command.is_empty() {
                     continue;
                 }
-                if command.eq_ignore_ascii_case("/q") {
+                let parsed = commands::parse(command);
+                if parsed == Some(Command::Exit) {
                     break;
                 }
                 // Avoid retaining large pasted input in history.
@@ -122,19 +124,17 @@ pub fn run(path: &Path, size: u64) -> Result<()> {
                     continue;
                 }
                 editor.add_history_entry(command)?;
-                if command.eq_ignore_ascii_case("/help") {
-                    println!(
-                        r"Commands:
-  /help  Show help
-  /info  Show file information"
-                    );
-                    println!(r"  /q     Quit (also /Q)");
+                if parsed == Some(Command::Help) {
+                    println!("Commands:");
+                    for definition in COMMANDS {
+                        println!("  {:<6} {}", definition.name, definition.description);
+                    }
                     println!("\nLeft/Right: move cursor | Up/Down: history | Tab: complete");
                     println!("Type a command prefix for hints; Right arrow accepts a unique hint.");
                     println!("Esc / Ctrl+C: quit | Ctrl+D: quit on empty input");
                     println!("Heap analysis is not implemented yet.\n");
-                } else if command.eq_ignore_ascii_case("/info") {
-                    print_info(path, size);
+                } else if parsed == Some(Command::Info) {
+                    print_info(path, size, workspace);
                     println!();
                 } else {
                     println!("Unknown command. Type /help for commands.\n");
@@ -148,7 +148,7 @@ pub fn run(path: &Path, size: u64) -> Result<()> {
     Ok(())
 }
 
-fn print_info(path: &Path, size: u64) {
+fn print_info(path: &Path, size: u64, workspace: &Workspace) {
     println!("File  {}", path.display());
     let units = ["B", "KiB", "MiB", "GiB", "TiB", "PiB", "EiB"];
     let mut value = size as f64;
@@ -158,6 +158,7 @@ fn print_info(path: &Path, size: u64) {
         unit += 1;
     }
     println!("Size  {value:.2} {} ({size} bytes)", units[unit]);
+    println!("Workspace  {}", workspace.path().display());
 }
 
 #[cfg(test)]
@@ -169,7 +170,7 @@ mod tests {
         let history = DefaultHistory::new();
         let context = Context::new(&history);
         let hint = Commands.hint(r"/", 1, &context).unwrap();
-        assert_eq!(hint.display(), r"  [/help  /info  /q]");
+        assert_eq!(hint.display(), r"  [/help  /info  /q  /exit]");
         assert_eq!(hint.completion(), None);
     }
 
@@ -177,13 +178,18 @@ mod tests {
     fn unique_prefix_completes_case_insensitively() {
         let history = DefaultHistory::new();
         let context = Context::new(&history);
-        for prefix in [r"/h", r"/H"] {
+        for (prefix, suffix, replacement) in [
+            ("/h", "elp", "/help"),
+            ("/H", "elp", "/help"),
+            ("/e", "xit", "/exit"),
+            ("/E", "xit", "/exit"),
+        ] {
             let hint = Commands.hint(prefix, prefix.len(), &context).unwrap();
-            assert_eq!(hint.display(), "elp");
-            assert_eq!(hint.completion(), Some("elp"));
+            assert_eq!(hint.display(), suffix);
+            assert_eq!(hint.completion(), Some(suffix));
             let (_, candidates) = Commands.complete(prefix, prefix.len(), &context).unwrap();
             assert_eq!(candidates.len(), 1);
-            assert_eq!(candidates[0].replacement, r"/help");
+            assert_eq!(candidates[0].replacement, replacement);
         }
     }
 

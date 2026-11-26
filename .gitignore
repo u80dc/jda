@@ -11,6 +11,7 @@
 *.hprof.zip
 
 # Analysis cache
+.jda/
 /jdump-cache/
 /jda-cache/
 

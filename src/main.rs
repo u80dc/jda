@@ -4,7 +4,9 @@ use anyhow::{Context, Result, bail};
 use clap::Parser;
 
 mod cli;
+mod commands;
 mod console;
+mod workspace;
 
 fn main() -> Result<()> {
     let args = cli::Args::parse();
@@ -16,5 +18,7 @@ fn main() -> Result<()> {
     }
     // Only metadata is read; dump contents are not loaded.
     drop(file);
-    console::run(&args.file, metadata.len())
+    let workspace =
+        workspace::Workspace::prepare(args.workspace.as_deref(), &args.file, args.force)?;
+    console::run(&args.file, metadata.len(), &workspace)
 }
